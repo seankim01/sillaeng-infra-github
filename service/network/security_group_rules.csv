@@ -1,0 +1,46 @@
+vpc,name,service,purpose,position,type,from_port,to_port,protocol,source,src_sg,description
+sillaeng-demo-service-vpc,ext-stadium-alb,service,alb-ext-stadium,alb,ingress,80,80,tcp,0.0.0.0/0,,Ingress 80 all
+sillaeng-demo-service-vpc,ext-stadium-alb,service,alb-ext-stadium,alb,ingress,443,443,tcp,0.0.0.0/0,,Ingress 443 all
+sillaeng-demo-service-vpc,ext-stadium-alb,service,alb-ext-stadium,alb,egress,0,0,-1,0.0.0.0/0,,Egress all 
+sillaeng-demo-service-vpc,ext-runner-alb,service,alb-ext-runner,alb,ingress,80,80,tcp,0.0.0.0/0,,Ingress 80 all
+sillaeng-demo-service-vpc,ext-runner-alb,service,alb-ext-runner,alb,ingress,443,443,tcp,0.0.0.0/0,,Ingress 443 all
+sillaeng-demo-service-vpc,ext-runner-alb,service,alb-ext-runner,alb,egress,0,0,-1,0.0.0.0/0,,Egress all 
+sillaeng-demo-service-vpc,ext-runner-nlb,service,nlb-ext-runner,alb,ingress,80,80,tcp,0.0.0.0/0,,Ingress 80 all
+sillaeng-demo-service-vpc,ext-runner-nlb,service,nlb-ext-runner,alb,ingress,443,443,tcp,0.0.0.0/0,,Ingress 443 all
+sillaeng-demo-service-vpc,ext-runner-nlb,service,nlb-ext-runner,alb,egress,0,0,-1,0.0.0.0/0,,Egress all 
+sillaeng-demo-service-vpc,stadium-ec2,service,ec2-stadium,ec2,ingress,22,22,tcp,0.0.0.0/0,,Ingress 22 all
+sillaeng-demo-service-vpc,stadium-ec2,service,ec2-stadium,ec2,ingress,80,80,tcp,0.0.0.0/0,,Ingress 80 all
+sillaeng-demo-service-vpc,stadium-ec2,service,ec2-stadium,ec2,ingress,443,443,tcp,0.0.0.0/0,,Ingress 443 all
+sillaeng-demo-service-vpc,stadium-ec2,service,ec2-stadium,ec2,egress,0,0,-1,0.0.0.0/0,,Egress all
+sillaeng-demo-service-vpc,runner-ec2,service,ec2-runner,ec2,ingress,22,22,tcp,0.0.0.0/0,,Ingress 22 all
+sillaeng-demo-service-vpc,runner-ec2,service,ec2-runner,ec2,ingress,80,80,tcp,0.0.0.0/0,,Ingress 80 all
+sillaeng-demo-service-vpc,runner-ec2,service,ec2-runner,ec2,ingress,443,443,tcp,0.0.0.0/0,,Ingress 443 all
+sillaeng-demo-service-vpc,runner-ec2,service,ec2-runner,ec2,egress,0,0,-1,0.0.0.0/0,,Egress all
+sillaeng-demo-mng-vpc,mng-public-bastion-ec2,mng,mng-public-bastion,ec2,ingress,22,22,tcp,0.0.0.0/0,,Ingress 22 all
+sillaeng-demo-mng-vpc,mng-public-bastion-ec2,mng,mng-public-bastion,ec2,ingress,80,80,tcp,0.0.0.0/0,,Ingress 80 all
+sillaeng-demo-mng-vpc,mng-public-bastion-ec2,mng,mng-public-bastion,ec2,ingress,443,443,tcp,0.0.0.0/0,,Ingress 443 all
+sillaeng-demo-mng-vpc,mng-public-bastion-ec2,mng,mng-public-bastion,ec2,egress,0,0,-1,0.0.0.0/0,,Egress all 
+sillaeng-demo-mng-vpc,mng-private-bastion-ec2,mng,mng-private-bastion,ec2,ingress,22,22,tcp,0.0.0.0/0,,Ingress 22 all
+sillaeng-demo-mng-vpc,mng-private-bastion-ec2,mng,mng-private-bastion,ec2,ingress,80,80,tcp,0.0.0.0/0,,Ingress 80 all
+sillaeng-demo-mng-vpc,mng-private-bastion-ec2,mng,mng-private-bastion,ec2,ingress,443,443,tcp,0.0.0.0/0,,Ingress 443 all
+sillaeng-demo-mng-vpc,mng-private-bastion-ec2,mng,mng-private-bastion,ec2,egress,0,0,-1,0.0.0.0/0,,Egress all
+sillaeng-demo-service-vpc,service-public-bastion-ec2,mng,service-public-bastion,ec2,ingress,22,22,tcp,0.0.0.0/0,,Ingress 22 all
+sillaeng-demo-service-vpc,service-public-bastion-ec2,mng,service-public-bastion,ec2,ingress,80,80,tcp,0.0.0.0/0,,Ingress 80 all
+sillaeng-demo-service-vpc,service-public-bastion-ec2,mng,service-public-bastion,ec2,ingress,443,443,tcp,0.0.0.0/0,,Ingress 443 all
+sillaeng-demo-service-vpc,service-public-bastion-ec2,mng,service-public-bastion,ec2,egress,0,0,-1,0.0.0.0/0,,Egress all 
+sillaeng-demo-service-vpc,service-private-bastion-ec2,mng,service-private-bastion,ec2,ingress,22,22,tcp,0.0.0.0/0,,Ingress 22 all
+sillaeng-demo-service-vpc,service-private-bastion-ec2,mng,service-private-bastion,ec2,ingress,53,53,tcp,0.0.0.0/0,,Ingress DNS TCP 53 all
+sillaeng-demo-service-vpc,service-private-bastion-ec2,mng,service-private-bastion,ec2,ingress,53,53,udp,0.0.0.0/0,,Ingress DNS UDP 53 all
+sillaeng-demo-service-vpc,service-private-bastion-ec2,mng,service-private-bastion,ec2,ingress,80,80,tcp,0.0.0.0/0,,Ingress 80 all
+sillaeng-demo-service-vpc,service-private-bastion-ec2,mng,service-private-bastion,ec2,ingress,443,443,tcp,0.0.0.0/0,,Ingress 443 all
+sillaeng-demo-service-vpc,service-private-bastion-ec2,mng,service-private-bastion,ec2,egress,0,0,-1,0.0.0.0/0,,Egress all 
+sillaeng-demo-dev-vpc,dev-public-bastion-ec2,mng,dev-public-bastion,ec2,ingress,22,22,tcp,0.0.0.0/0,,Ingress 22 all
+sillaeng-demo-dev-vpc,dev-public-bastion-ec2,mng,dev-public-bastion,ec2,ingress,80,80,tcp,0.0.0.0/0,,Ingress 80 all
+sillaeng-demo-dev-vpc,dev-public-bastion-ec2,mng,dev-public-bastion,ec2,ingress,443,443,tcp,0.0.0.0/0,,Ingress 443 all
+sillaeng-demo-dev-vpc,dev-public-bastion-ec2,mng,dev-public-bastion,ec2,egress,0,0,-1,0.0.0.0/0,,Egress all 
+sillaeng-demo-dev-vpc,dev-private-bastion-ec2,mng,dev-private-bastion,ec2,ingress,22,22,tcp,0.0.0.0/0,,Ingress 22 all
+sillaeng-demo-dev-vpc,dev-private-bastion-ec2,mng,dev-private-bastion,ec2,ingress,53,53,tcp,0.0.0.0/0,,Ingress DNS TCP 53 all
+sillaeng-demo-dev-vpc,dev-private-bastion-ec2,mng,dev-private-bastion,ec2,ingress,53,53,udp,0.0.0.0/0,,Ingress DNS UDP 53 all
+sillaeng-demo-dev-vpc,dev-private-bastion-ec2,mng,dev-private-bastion,ec2,ingress,80,80,tcp,0.0.0.0/0,,Ingress 80 all
+sillaeng-demo-dev-vpc,dev-private-bastion-ec2,mng,dev-private-bastion,ec2,ingress,443,443,tcp,0.0.0.0/0,,Ingress 443 all
+sillaeng-demo-dev-vpc,dev-private-bastion-ec2,mng,dev-private-bastion,ec2,egress,0,0,-1,0.0.0.0/0,,Egress all 
