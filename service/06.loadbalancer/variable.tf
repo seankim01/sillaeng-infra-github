@@ -2,12 +2,12 @@
 variable "company" {
   description = "Company Tag"
   type        = string
-  default     = "hsfms"
+  default     = "sillaeng"
 }
 variable "env" {
   description = "Environment Tag"
   type        = string
-  default     = "dr"
+  default     = "demo"
 }
 variable "service" {
   description = "Service Tag"
@@ -38,4 +38,3 @@ variable "lb_listener_rules_create" {
   type        = any
   default     = []
 }
-

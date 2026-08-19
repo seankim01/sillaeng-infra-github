@@ -75,28 +75,25 @@ ec2_create = [
   # ============================================
   # GPU 학습 개발 서버 1 (g6e.xlarge, 4vCPU/32GB, Ubuntu)
   # ============================================
-  # {
-  #   index                  = "service-ec2-gpu-train-01a"
-  #   ami                    = "ami-06adeb45a79fb3728" # Deep Learning Ubuntu AMI
-  #   instance_type          = "g6e.xlarge"
-  #   sub_index              = "service-pri-gpu-train-01a"
-  #   sg_index               = ["service-private-gpu-train-ec2"]
-  #   key_name               = "mzc-dsa04-shared"
-  #   volume_size            = 200
-  #   volume_type            = "gp3"
-  #   eip_required           = false
-  #   user_data              = "userdata/example_userdata.sh"
-  #   instance_profile_index = "ssm"
-  #   eni_required           = false
-  #   spot_enabled           = true
-  #   spot_instance_type     = "persistent"
-  #   spot_interruption_behavior = "stop"
-  #   network_boundary       = "private"
-  #   purpose                = "gpu-train-01"
-  #   service                = "service"
-  #   region_az              = "apne2a"
-  #   type                   = "ec2"
-  # },
+  {
+    index                  = "service-ec2-gpu-train-01a"
+    ami                    = "ami-06adeb45a79fb3728" # Deep Learning Ubuntu AMI
+    instance_type          = "g6e.xlarge"
+    sub_index              = "service-pri-gpu-train-01a"
+    sg_index               = ["service-private-gpu-train-ec2"]
+    key_name               = "mzc-dsa04-shared"
+    volume_size            = 200
+    volume_type            = "gp3"
+    eip_required           = false
+    user_data              = "userdata/example_userdata.sh"
+    instance_profile_index = "ssm"
+    eni_required           = false
+    network_boundary       = "private"
+    purpose                = "gpu-train-01"
+    service                = "service"
+    region_az              = "apne2a"
+    type                   = "ec2"
+  },
 
   # ============================================
   # GPU 학습 개발 서버 2 (g6e.xlarge, 4vCPU/32GB, Ubuntu)

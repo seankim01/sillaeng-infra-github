@@ -18,13 +18,12 @@ output "rt_info" {
   description = "route table information map type output."
 }
 
-# 추후 VPN 설치 시 주석 해제
-# output "vpn_gateway_id" {
-#   value       = aws_vpn_gateway.this.id
-#   description = "VPN Gateway ID"
-# }
-#
-# output "vpn_connection_info" {
-#   value       = { for k, v in aws_vpn_connection.this : k => v.id }
-#   description = "VPN Connection information."
-# }
+output "vpn_gateway_id" {
+  value       = aws_vpn_gateway.this.id
+  description = "VPN Gateway ID"
+}
+
+output "vpn_connection_info" {
+  value       = { for k, v in aws_vpn_connection.this : k => v.id }
+  description = "VPN Connection information."
+}

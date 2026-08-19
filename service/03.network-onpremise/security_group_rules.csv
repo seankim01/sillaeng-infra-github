@@ -14,4 +14,7 @@ bundang-idc-bundang-vpc,bundang-public-bastion-ec2,bundang,bundang-public-bastio
 bundang-idc-bundang-vpc,bundang-private-bastion-ec2,bundang,bundang-private-bastion,ec2,ingress,22,22,tcp,0.0.0.0/0,,Ingress 22 all
 bundang-idc-bundang-vpc,bundang-private-bastion-ec2,bundang,bundang-private-bastion,ec2,ingress,80,80,tcp,0.0.0.0/0,,Ingress 80 all
 bundang-idc-bundang-vpc,bundang-private-bastion-ec2,bundang,bundang-private-bastion,ec2,ingress,443,443,tcp,0.0.0.0/0,,Ingress 443 all
+bundang-idc-bundang-vpc,bundang-private-bastion-ec2,bundang,bundang-private-bastion,ec2,ingress,22,22,tcp,172.25.0.0/22,,Ingress SSH from Service VPC
+bundang-idc-bundang-vpc,bundang-private-bastion-ec2,bundang,bundang-private-bastion,ec2,ingress,80,80,tcp,172.25.0.0/22,,Ingress HTTP from Service VPC
+bundang-idc-bundang-vpc,bundang-private-bastion-ec2,bundang,bundang-private-bastion,ec2,ingress,443,443,tcp,172.25.0.0/22,,Ingress HTTPS from Service VPC
 bundang-idc-bundang-vpc,bundang-private-bastion-ec2,bundang,bundang-private-bastion,ec2,egress,0,0,-1,0.0.0.0/0,,Egress all

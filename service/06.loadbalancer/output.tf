@@ -1,6 +1,4 @@
-# output "lb_info" {
-#   value       = module.loadbalancer.loadbalancer_info
-#   description = "loadbalancer information map type output."
-# }
-
-
+output "alb_dns_name" {
+  value       = { for k, v in module.lb.loadbalancer_info : k => v.dns_name }
+  description = "ALB DNS name"
+}

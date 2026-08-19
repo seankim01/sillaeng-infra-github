@@ -193,30 +193,30 @@ tgw_route_create = []
 # VPN - Site-to-Site VPN (VPN Gateway 직접 연결, TGW 미사용)
 # IDC 연결용 Customer Gateway + VPN Connection
 # 추후 VPN 설치 시 주석 해제
-# cgw = [
-#   {
-#     index      = "cgw-01"
-#     purpose    = "idc"
-#     name       = "sillaeng-cgw-idc"
-#     bgp_asn    = 65001
-#     ip_address = "15.164.136.35" # IDC 보안장비 Public IP
-#     type       = "ipsec.1"
-#   },
-# ]
+cgw = [
+  {
+    index      = "cgw-01"
+    purpose    = "idc"
+    name       = "sillaeng-cgw-idc"
+    bgp_asn    = 65001
+    ip_address = "3.34.225.161" # IDC 보안장비 Public IP
+    type       = "ipsec.1"
+  },
+]
 
-# vpn = [
-#   {
-#     index               = "s2s-01"
-#     purpose             = "sillaeng-idc-vpn"
-#     vpc_name            = "sillaeng-demo-service-vpc"
-#     customer_gateway_id = "cgw-01"
-#     type                = "ipsec.1"
-#     static_routes_only  = true
-#   },
-# ]
+vpn = [
+  {
+    index               = "s2s-01"
+    purpose             = "sillaeng-idc-vpn"
+    vpc_name            = "sillaeng-demo-service-vpc"
+    customer_gateway_id = "cgw-01"
+    type                = "ipsec.1"
+    static_routes_only  = true
+  },
+]
 
-cgw = []
-vpn = []
+# cgw = []
+# vpn = []
 
 # VPC Endpoints - S3 Gateway Endpoint
 vpc_endpoint_create = [
