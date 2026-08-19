@@ -4,7 +4,8 @@ provider "aws" {
 }
 
 resource "aws_s3_bucket" "tfstate" {
-  bucket = "sillaeng-demo-s3-backend"
+  bucket        = "sillaeng-demo-s3-backend"
+  force_destroy = true  # 버킷 내 객체가 있어도 삭제 허용
 }
 
 resource "aws_s3_bucket_versioning" "versioning" {
