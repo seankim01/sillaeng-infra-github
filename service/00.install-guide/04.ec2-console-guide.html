@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>04. EC2 (Service VPC) - AWS 콘솔 배포 가이드</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background: #f8f9fa; color: #333; }
+        h1 { color: #232f3e; border-bottom: 3px solid #ff9900; padding-bottom: 10px; }
+        h2 { color: #232f3e; border-left: 4px solid #ff9900; padding-left: 12px; margin-top: 40px; }
+        h3 { color: #545b64; }
+        table { border-collapse: collapse; width: 100%; margin: 15px 0; }
+        th, td { border: 1px solid #ddd; padding: 10px 12px; text-align: left; }
+        th { background: #232f3e; color: white; }
+        tr:nth-child(even) { background: #f2f2f2; }
+        .diagram-box { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .step-box { background: #fff3cd; border-left: 4px solid #ff9900; padding: 15px; margin: 10px 0; border-radius: 4px; }
+        .info-box { background: #d1ecf1; border-left: 4px solid #17a2b8; padding: 15px; margin: 10px 0; border-radius: 4px; }
+        .warning-box { background: #f8d7da; border-left: 4px solid #dc3545; padding: 15px; margin: 10px 0; border-radius: 4px; }
+        code { background: #e9ecef; padding: 2px 6px; border-radius: 3px; font-family: 'Courier New', monospace; }
+        pre { background: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+
+<h1>04. EC2 (Service VPC 인스턴스) - AWS 콘솔 배포 가이드</h1>
+
+<div class="info-box">
+    <strong>환경 정보</strong><br>
+    VPC: sillaeng-demo-service-vpc (172.25.0.0/22) | Key Pair: mzc-dsa04-shared
+</div>
+
+<h2>인스턴스 배치도</h2>
+
+<div class="diagram-box">
+    <pre class="mermaid">
+graph TB
+    subgraph VPC["sillaeng-demo-service-vpc"]
+        subgraph PUB["Public Subnet - 2a"]
+            BASTION["Bastion Host<br/>t3.small<br/>Amazon Linux 2023<br/>EIP 할당"]
+        end
+        subgraph GPU["Private - GPU 학습 - 2a"]
+            GPU_TRAIN["GPU 학습 서버<br/>g6e.xlarge<br/>NVIDIA L40S (46GB)<br/>Deep Learning AMI"]
+        end
+        subgraph DEV["Private - 개발 - 2a"]
+            DEV_SVR["개발 서버<br/>t3.medium<br/>Ubuntu 22.04<br/>Apache2 설치"]
+        end
+    end
+
+    USER["관리자"] -->|"SSH:22"| BASTION
+    BASTION -->|"SSH ProxyJump"| GPU_TRAIN
+    BASTION -->|"SSH ProxyJump"| DEV_SVR
+    ALB["ALB"] -->|"HTTP:80"| DEV_SVR
+    </pre>
+</div>
+
+<h2>사전 준비: IAM Role 생성</h2>
+
+<div class="step-box"><strong>경로:</strong> IAM > Roles > Create role</div>
+<ol>
+    <li>Trusted entity: <strong>AWS service</strong> > <strong>EC2</strong></li>
+    <li>Permissions: <code>AmazonEC2RoleforSSM</code> 검색 후 체크</li>
+    <li>Role name: <code>sillaeng-demo-service-ssm-role</code></li>
+</ol>
+
+<h2>인스턴스 1: Bastion Host</h2>
+
+<div class="step-box"><strong>경로:</strong> EC2 > Instances > Launch instances</div>
+
+<table>
+    <tr><th>항목</th><th>설정값</th></tr>
+    <tr><td>Name</td><td>sillaeng-demo-service-ec2-bastion</td></tr>
+    <tr><td>AMI</td><td>Amazon Linux 2023 (최신)</td></tr>
+    <tr><td>Instance type</td><td>t3.small</td></tr>
+    <tr><td>Key pair</td><td>mzc-dsa04-shared</td></tr>
+    <tr><td>VPC</td><td>sillaeng-demo-service-vpc</td></tr>
+    <tr><td>Subnet</td><td>service-pub-01a</td></tr>
+    <tr><td>Auto-assign public IP</td><td>Enable</td></tr>
+    <tr><td>Security group</td><td>service-pub-bastion-ec2</td></tr>
+    <tr><td>Storage</td><td>30 GiB gp3</td></tr>
+    <tr><td>IAM instance profile</td><td>sillaeng-demo-service-ssm-role</td></tr>
+</table>
+
+<p><strong>생성 후:</strong> Elastic IP 할당 → Bastion에 Associate</p>
+
+<h2>인스턴스 2: GPU 학습/개발 서버</h2>
+
+<table>
+    <tr><th>항목</th><th>설정값</th></tr>
+    <tr><td>Name</td><td>sillaeng-demo-service-ec2-gpu-train-01</td></tr>
+    <tr><td>AMI</td><td>ami-06adeb45a79fb3728 (Deep Learning AMI)</td></tr>
+    <tr><td>Instance type</td><td>g6e.xlarge</td></tr>
+    <tr><td>Subnet</td><td>service-pri-gpu-train-01a</td></tr>
+    <tr><td>Security group</td><td>service-private-gpu-train-ec2</td></tr>
+    <tr><td>Storage</td><td>200 GiB gp3</td></tr>
+    <tr><td>구매 옵션</td><td><strong>On-Demand</strong> (Spot 사용 시 지연 발생 가능)</td></tr>
+</table>
+
+<div class="warning-box">
+    <strong>주의:</strong> GPU 인스턴스(g6e.xlarge)를 Spot으로 요청하면 용량 부족 시 무기한 대기할 수 있습니다. 안정적 사용이 필요하면 On-Demand를 권장합니다.
+</div>
+
+<h3>GPU 서버 스펙 정보</h3>
+<div class="diagram-box">
+    <pre class="mermaid">
+graph LR
+    subgraph GPU_SPEC["g6e.xlarge 스펙"]
+        A["vCPU: 4"]
+        B["Memory: 32 GiB"]
+        C["GPU: NVIDIA L40S"]
+        D["GPU Memory: 46 GiB"]
+        E["CUDA: 12.9"]
+        F["cuDNN: 9.10.2"]
+        G["Driver: 595.71.05"]
+    end
+    </pre>
+</div>
+
+<h2>인스턴스 3: 개발 서버</h2>
+
+<table>
+    <tr><th>항목</th><th>설정값</th></tr>
+    <tr><td>Name</td><td>sillaeng-demo-service-ec2-dev</td></tr>
+    <tr><td>AMI</td><td>Ubuntu 22.04 LTS (Canonical 공식)</td></tr>
+    <tr><td>Instance type</td><td>t3.medium</td></tr>
+    <tr><td>Subnet</td><td>service-pri-dev-01a</td></tr>
+    <tr><td>Security group</td><td>service-private-dev-ec2</td></tr>
+    <tr><td>Storage</td><td>100 GiB gp3</td></tr>
+    <tr><td>User data</td><td>아래 스크립트 입력</td></tr>
+</table>
+
+<h3>User Data (웹서버 자동 설치)</h3>
+<pre>#!/bin/bash
+apt update -y
+apt install -y apache2
+systemctl enable apache2
+systemctl start apache2
+HOSTNAME=$(hostname)
+LOCAL_IP=$(hostname -I | awk '{print $1}')
+cat > /var/www/html/index.html &lt;&lt;HTML
+&lt;!DOCTYPE html&gt;
+&lt;html&gt;&lt;body&gt;
+&lt;h2&gt;Server Information&lt;/h2&gt;
+&lt;p&gt;Hostname: ${HOSTNAME}&lt;/p&gt;
+&lt;p&gt;IP: ${LOCAL_IP}&lt;/p&gt;
+&lt;/body&gt;&lt;/html&gt;
+HTML</pre>
+
+<h2>SSH 접속 흐름</h2>
+
+<div class="diagram-box">
+    <pre class="mermaid">
+sequenceDiagram
+    participant User as 로컬 PC
+    participant Bastion as Bastion (Public)
+    participant GPU as GPU 서버 (Private)
+    participant Dev as 개발 서버 (Private)
+
+    User->>Bastion: SSH (EIP:22)
+    Bastion->>GPU: SSH ProxyJump (172.25.1.x:22)
+    Bastion->>Dev: SSH ProxyJump (172.25.2.x:22)
+    </pre>
+</div>
+
+<h3>SSH Config 예시 (~/.ssh/config)</h3>
+<pre>Host sillaeng-aws-bastion
+    HostName &lt;Bastion_EIP&gt;
+    User ec2-user
+    IdentityFile ~/.ssh/mzc-dsa04-shared.pem
+
+Host sillaeng-aws-gpu
+    HostName &lt;GPU_Private_IP&gt;
+    User ubuntu
+    IdentityFile ~/.ssh/mzc-dsa04-shared.pem
+    ProxyJump sillaeng-aws-bastion
+
+Host sillaeng-aws-dev
+    HostName &lt;Dev_Private_IP&gt;
+    User ubuntu
+    IdentityFile ~/.ssh/mzc-dsa04-shared.pem
+    ProxyJump sillaeng-aws-bastion</pre>
+
+<script>mermaid.initialize({startOnLoad:true, theme:'default'});</script>
+</body>
+</html>

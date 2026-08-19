@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>06. ALB (Application Load Balancer) - AWS 콘솔 배포 가이드</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background: #f8f9fa; color: #333; }
+        h1 { color: #232f3e; border-bottom: 3px solid #ff9900; padding-bottom: 10px; }
+        h2 { color: #232f3e; border-left: 4px solid #ff9900; padding-left: 12px; margin-top: 40px; }
+        h3 { color: #545b64; }
+        table { border-collapse: collapse; width: 100%; margin: 15px 0; }
+        th, td { border: 1px solid #ddd; padding: 10px 12px; text-align: left; }
+        th { background: #232f3e; color: white; }
+        tr:nth-child(even) { background: #f2f2f2; }
+        .diagram-box { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .step-box { background: #fff3cd; border-left: 4px solid #ff9900; padding: 15px; margin: 10px 0; border-radius: 4px; }
+        .info-box { background: #d1ecf1; border-left: 4px solid #17a2b8; padding: 15px; margin: 10px 0; border-radius: 4px; }
+        .success-box { background: #d4edda; border-left: 4px solid #28a745; padding: 15px; margin: 10px 0; border-radius: 4px; }
+        code { background: #e9ecef; padding: 2px 6px; border-radius: 3px; font-family: 'Courier New', monospace; }
+        pre { background: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+
+<h1>06. Application Load Balancer (ALB) - AWS 콘솔 배포 가이드</h1>
+
+<div class="info-box">
+    <strong>환경 정보</strong><br>
+    VPC: sillaeng-demo-service-vpc | 대상 EC2: service-ec2-dev-01a (개발 서버)
+</div>
+
+<h2>ALB 트래픽 흐름</h2>
+
+<div class="diagram-box">
+    <pre class="mermaid">
+graph LR
+    USER["사용자<br/>(브라우저)"] -->|"HTTP:80"| ALB["ALB<br/>sillaeng-demo-service-alb-ext<br/>Public Subnet"]
+    ALB -->|"Health Check<br/>HTTP:80 /"| TG["Target Group<br/>tg-dev"]
+    TG -->|"HTTP:80"| EC2["개발 서버<br/>service-ec2-dev-01a<br/>Private Subnet"]
+    </pre>
+</div>
+
+<div class="diagram-box">
+    <pre class="mermaid">
+graph TB
+    subgraph FLOW["요청 처리 흐름"]
+        direction LR
+        A["1. 사용자 요청<br/>ALB DNS:80"] --> B["2. ALB 수신<br/>(Public Subnet)"]
+        B --> C["3. Listener 규칙<br/>HTTP:80 Forward"]
+        C --> D["4. Target Group<br/>Health Check OK"]
+        D --> E["5. EC2 응답<br/>Apache (port 80)"]
+    end
+    </pre>
+</div>
+
+<h2>Step 1. Target Group 생성</h2>
+
+<div class="step-box"><strong>경로:</strong> EC2 > Load Balancing > Target Groups > Create target group</div>
+
+<h3>1-1. Basic configuration</h3>
+<table>
+    <tr><th>항목</th><th>설정값</th></tr>
+    <tr><td>Target type</td><td>Instances</td></tr>
+    <tr><td>Target group name</td><td>sillaeng-demo-tg-dev</td></tr>
+    <tr><td>Protocol : Port</td><td>HTTP : 80</td></tr>
+    <tr><td>IP address type</td><td>IPv4</td></tr>
+    <tr><td>VPC</td><td>sillaeng-demo-service-vpc</td></tr>
+    <tr><td>Protocol version</td><td>HTTP1</td></tr>
+</table>
+
+<h3>1-2. Health checks</h3>
+<table>
+    <tr><th>항목</th><th>설정값</th><th>설명</th></tr>
+    <tr><td>Health check protocol</td><td>HTTP</td><td>대상 프로토콜</td></tr>
+    <tr><td>Health check path</td><td>/</td><td>체크할 URL 경로</td></tr>
+    <tr><td>Port</td><td>Traffic port</td><td>타겟과 동일 포트</td></tr>
+    <tr><td>Healthy threshold</td><td>3</td><td>연속 성공 횟수</td></tr>
+    <tr><td>Unhealthy threshold</td><td>3</td><td>연속 실패 횟수</td></tr>
+    <tr><td>Timeout</td><td>10 seconds</td><td>응답 대기 시간</td></tr>
+    <tr><td>Interval</td><td>30 seconds</td><td>체크 주기</td></tr>
+    <tr><td>Success codes</td><td>200-399</td><td>정상 응답 코드</td></tr>
+</table>
+
+<h3>1-3. Register targets</h3>
+<ol>
+    <li>Available instances에서 <code>sillaeng-demo-service-ec2-dev</code> 체크</li>
+    <li>Port: 80 확인</li>
+    <li><strong>Include as pending below</strong> 클릭</li>
+    <li><strong>Create target group</strong> 클릭</li>
+</ol>
+
+<div class="diagram-box">
+    <pre class="mermaid">
+graph LR
+    TG["Target Group<br/>sillaeng-demo-tg-dev"] --> EC2["EC2: service-ec2-dev-01a<br/>Port: 80<br/>Health: Healthy ✅"]
+    </pre>
+</div>
+
+<h2>Step 2. ALB 생성</h2>
+
+<div class="step-box"><strong>경로:</strong> EC2 > Load Balancing > Load Balancers > Create > Application Load Balancer</div>
+
+<h3>2-1. Basic configuration</h3>
+<table>
+    <tr><th>항목</th><th>설정값</th></tr>
+    <tr><td>Load balancer name</td><td>sillaeng-demo-service-alb-ext</td></tr>
+    <tr><td>Scheme</td><td>Internet-facing</td></tr>
+    <tr><td>IP address type</td><td>IPv4</td></tr>
+</table>
+
+<h3>2-2. Network mapping</h3>
+<table>
+    <tr><th>항목</th><th>설정값</th></tr>
+    <tr><td>VPC</td><td>sillaeng-demo-service-vpc</td></tr>
+    <tr><td>ap-northeast-2a</td><td>service-pub-01a ✅</td></tr>
+    <tr><td>ap-northeast-2c</td><td>service-pub-02c ✅</td></tr>
+</table>
+
+<div class="info-box">최소 2개 AZ를 선택해야 합니다. Public Subnet을 선택합니다.</div>
+
+<h3>2-3. Security groups</h3>
+<p>기본 SG 제거 후 <code>service-pub-alb</code> 선택 (HTTP 80, HTTPS 443 허용)</p>
+
+<h3>2-4. Listeners and routing</h3>
+<table>
+    <tr><th>Protocol</th><th>Port</th><th>Default action</th></tr>
+    <tr><td>HTTP</td><td>80</td><td>Forward to → sillaeng-demo-tg-dev</td></tr>
+</table>
+
+<p><strong>Create load balancer</strong> 클릭</p>
+
+<h2>Step 3. 동작 확인</h2>
+
+<ol>
+    <li>Load Balancers에서 상태가 <strong>Active</strong>가 될 때까지 대기 (2~3분)</li>
+    <li><strong>DNS name</strong> 복사</li>
+    <li>브라우저에서 접속 테스트</li>
+</ol>
+
+<pre># 터미널에서 테스트
+curl http://&lt;ALB_DNS_Name&gt;
+
+# 정상 응답 예시
+&lt;h2&gt;Server Information&lt;/h2&gt;
+&lt;p&gt;Hostname: ip-172-25-2-xx&lt;/p&gt;
+&lt;p&gt;IP: 172.25.2.xx&lt;/p&gt;</pre>
+
+<div class="success-box">
+    <strong>성공!</strong> ALB DNS로 접속하면 개발 서버의 Apache 페이지가 표시됩니다.
+</div>
+
+<h2>전체 아키텍처 (완성)</h2>
+
+<div class="diagram-box">
+    <pre class="mermaid">
+graph TB
+    subgraph INTERNET["인터넷"]
+        USER["사용자"]
+        ADMIN["관리자"]
+    end
+
+    subgraph VPC["sillaeng-demo-service-vpc (172.25.0.0/22)"]
+        subgraph PUB["Public Subnet"]
+            ALB["ALB<br/>HTTP:80"]
+            BASTION["Bastion<br/>SSH:22"]
+            NAT["NAT GW<br/>Regional"]
+        end
+        subgraph PRI["Private Subnets"]
+            GPU["GPU 서버<br/>g6e.xlarge"]
+            DEV["개발 서버<br/>t3.medium<br/>Apache:80"]
+        end
+    end
+
+    subgraph IDC["IDC VPC (192.168.0.0/16)"]
+        OPENSWAN["Openswan<br/>VPN"]
+        IDC_PRI["Private<br/>서버"]
+    end
+
+    USER -->|"HTTP"| ALB
+    ALB -->|"Forward"| DEV
+    ADMIN -->|"SSH"| BASTION
+    BASTION -.->|"ProxyJump"| GPU
+    BASTION -.->|"ProxyJump"| DEV
+    PRI --> NAT -->|"인터넷"| INTERNET
+    VPC ---|"IPsec VPN"| IDC
+    IDC_PRI -->|"curl 172.25.x.x"| DEV
+    DEV -->|"curl 192.168.x.x"| IDC_PRI
+    </pre>
+</div>
+
+<h2>Troubleshooting</h2>
+<table>
+    <tr><th>증상</th><th>원인</th><th>해결</th></tr>
+    <tr><td>ALB Provisioning 멈춤</td><td>서브넷 설정 오류</td><td>2개 AZ Public Subnet 확인</td></tr>
+    <tr><td>Target: unhealthy</td><td>웹서버 미실행</td><td>EC2에서 <code>systemctl status apache2</code></td></tr>
+    <tr><td>Target: unhealthy</td><td>SG 차단</td><td>EC2 SG에 VPC CIDR:80 허용 확인</td></tr>
+    <tr><td>504 Timeout</td><td>EC2 응답 없음</td><td>EC2 상태 및 서비스 확인</td></tr>
+    <tr><td>접속 불가</td><td>ALB SG 미설정</td><td>service-pub-alb SG에 80/443 확인</td></tr>
+</table>
+
+<script>mermaid.initialize({startOnLoad:true, theme:'default'});</script>
+</body>
+</html>

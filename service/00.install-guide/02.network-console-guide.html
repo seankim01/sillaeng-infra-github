@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>02. Service Network - AWS 콘솔 배포 가이드</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background: #f8f9fa; color: #333; }
+        h1 { color: #232f3e; border-bottom: 3px solid #ff9900; padding-bottom: 10px; }
+        h2 { color: #232f3e; border-left: 4px solid #ff9900; padding-left: 12px; margin-top: 40px; }
+        h3 { color: #545b64; }
+        table { border-collapse: collapse; width: 100%; margin: 15px 0; }
+        th, td { border: 1px solid #ddd; padding: 10px 12px; text-align: left; }
+        th { background: #232f3e; color: white; }
+        tr:nth-child(even) { background: #f2f2f2; }
+        .diagram-box { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .step-box { background: #fff3cd; border-left: 4px solid #ff9900; padding: 15px; margin: 10px 0; border-radius: 4px; }
+        .info-box { background: #d1ecf1; border-left: 4px solid #17a2b8; padding: 15px; margin: 10px 0; border-radius: 4px; }
+        .warning-box { background: #f8d7da; border-left: 4px solid #dc3545; padding: 15px; margin: 10px 0; border-radius: 4px; }
+        code { background: #e9ecef; padding: 2px 6px; border-radius: 3px; font-family: 'Courier New', monospace; }
+        .toc { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin: 20px 0; }
+        .toc ul { list-style: none; padding-left: 15px; }
+        .toc a { text-decoration: none; color: #007bff; }
+        .toc a:hover { text-decoration: underline; }
+        .badge { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; }
+        .badge-public { background: #28a745; color: white; }
+        .badge-private { background: #6c757d; color: white; }
+    </style>
+</head>
+<body>
+
+<h1>02. Service Network - AWS 콘솔 수동 배포 가이드</h1>
+
+<div class="info-box">
+    <strong>환경 정보</strong><br>
+    AWS Profile: mzc-dsa04 | 리전: ap-northeast-2 (서울) | VPC: sillaeng-demo-service-vpc (172.25.0.0/22)
+</div>
+
+<div class="toc">
+    <h3>목차</h3>
+    <ul>
+        <li><a href="#arch">전체 아키텍처</a></li>
+        <li><a href="#step1">Step 1. VPC 생성</a></li>
+        <li><a href="#step2">Step 2. Internet Gateway</a></li>
+        <li><a href="#step3">Step 3. Subnet 생성</a></li>
+        <li><a href="#step4">Step 4. NAT Gateway</a></li>
+        <li><a href="#step5">Step 5. Route Table</a></li>
+        <li><a href="#step6">Step 6. Security Group</a></li>
+        <li><a href="#step7">Step 7. VPC Endpoint</a></li>
+        <li><a href="#step8">Step 8. VPN Gateway</a></li>
+    </ul>
+</div>
+
+<h2 id="arch">전체 아키텍처</h2>
+
+<div class="diagram-box">
+    <pre class="mermaid">
+graph TB
+    subgraph INTERNET["인터넷"]
+        USER[사용자/관리자]
+    end
+
+    subgraph VPC["sillaeng-demo-service-vpc (172.25.0.0/22)"]
+        subgraph PUB["Public Subnet"]
+            IGW[Internet Gateway]
+            NAT[NAT Gateway<br/>Regional]
+            BASTION[Bastion Host]
+            ALB[Application<br/>Load Balancer]
+        end
+
+        subgraph PRI_APP["Private - App"]
+            APP[App 서버<br/>m6i.xlarge]
+        end
+
+        subgraph PRI_GPU_I["Private - GPU 추론"]
+            GPU_I[GPU 추론<br/>g6e.xlarge]
+        end
+
+        subgraph PRI_GPU_T["Private - GPU 학습"]
+            GPU_T[GPU 학습<br/>g6e.xlarge]
+        end
+
+        subgraph PRI_DEV["Private - 개발"]
+            DEV[개발 서버<br/>t3.medium]
+        end
+
+        subgraph PRI_DB["Private - DB"]
+            DB_PROD[운영 DB<br/>PostgreSQL]
+            DB_DEV[개발 DB<br/>PostgreSQL]
+        end
+
+        VPE[VPC Endpoint<br/>S3, SSM]
+    end
+
+    subgraph IDC["IDC (192.168.0.0/16)"]
+        OPENSWAN[Openswan VPN]
+    end
+
+    USER --> IGW
+    IGW --> ALB
+    IGW --> BASTION
+    ALB --> DEV
+    PRI_APP --> NAT
+    PRI_GPU_I --> NAT
+    PRI_GPU_T --> NAT
+    PRI_DEV --> NAT
+    NAT --> IGW
+
+    VPC ---|"VPN Tunnel<br/>VGW ↔ CGW"| IDC
+    VPE ---|"S3 Bucket"| S3[(Amazon S3)]
+    </pre>
+</div>
+
+<h2 id="step1">Step 1. VPC 생성</h2>
+
+<div class="step-box">
+    <strong>경로:</strong> AWS 콘솔 > VPC > Your VPCs > Create VPC
+</div>
+
+<table>
+    <tr><th>항목</th><th>입력값</th></tr>
+    <tr><td>Resources to create</td><td>VPC only</td></tr>
+    <tr><td>Name tag</td><td>sillaeng-demo-service-vpc</td></tr>
+    <tr><td>IPv4 CIDR</td><td>172.25.0.0/22</td></tr>
+    <tr><td>IPv6 CIDR block</td><td>No IPv6 CIDR block</td></tr>
+    <tr><td>Tenancy</td><td>Default</td></tr>
+</table>
+
+<p>생성 후 VPC 선택 > <strong>Actions</strong> > <strong>Edit VPC settings</strong>에서:</p>
+<ul>
+    <li>Enable DNS resolution ✅</li>
+    <li>Enable DNS hostnames ✅</li>
+</ul>
+
+<h2 id="step2">Step 2. Internet Gateway 생성</h2>
+
+<div class="step-box">
+    <strong>경로:</strong> VPC > Internet gateways > Create internet gateway
+</div>
+
+<ol>
+    <li>Name tag: <code>sillaeng-demo-service-igw</code></li>
+    <li>생성 후 <strong>Actions</strong> > <strong>Attach to VPC</strong> > <code>sillaeng-demo-service-vpc</code> 선택</li>
+</ol>
+
+<h2 id="step3">Step 3. Subnet 생성</h2>
+
+<div class="step-box">
+    <strong>경로:</strong> VPC > Subnets > Create subnet > VPC: sillaeng-demo-service-vpc
+</div>
+
+<div class="diagram-box">
+    <pre class="mermaid">
+graph LR
+    subgraph AZ_A["ap-northeast-2a"]
+        A1["service-pub-01a<br/>172.25.0.0/26<br/><span style='color:green'>Public</span>"]
+        A2["service-pri-app-01a<br/>172.25.0.128/26"]
+        A3["service-pri-gpu-infer-01a<br/>172.25.1.0/26"]
+        A4["service-pri-gpu-train-01a<br/>172.25.1.128/26"]
+        A5["service-pri-dev-01a<br/>172.25.2.0/26"]
+        A6["service-pri-db-01a<br/>172.25.2.128/27"]
+        A7["service-pri-devdb-01a<br/>172.25.2.192/27"]
+    end
+
+    subgraph AZ_C["ap-northeast-2c"]
+        C1["service-pub-02c<br/>172.25.0.64/26<br/><span style='color:green'>Public</span>"]
+        C2["service-pri-app-02c<br/>172.25.0.192/26"]
+        C3["service-pri-gpu-infer-02c<br/>172.25.1.64/26"]
+        C4["service-pri-gpu-train-02c<br/>172.25.1.192/26"]
+        C5["service-pri-dev-02c<br/>172.25.2.64/26"]
+        C6["service-pri-db-02c<br/>172.25.2.160/27"]
+        C7["service-pri-devdb-02c<br/>172.25.2.224/27"]
+    end
+    </pre>
+</div>
+
+<table>
+    <tr><th>구분</th><th>Name</th><th>AZ</th><th>CIDR</th><th>Public IP</th></tr>
+    <tr><td><span class="badge badge-public">Public</span></td><td>service-pub-01a</td><td>2a</td><td>172.25.0.0/26</td><td>Yes</td></tr>
+    <tr><td><span class="badge badge-public">Public</span></td><td>service-pub-02c</td><td>2c</td><td>172.25.0.64/26</td><td>Yes</td></tr>
+    <tr><td><span class="badge badge-private">App</span></td><td>service-pri-app-01a</td><td>2a</td><td>172.25.0.128/26</td><td>No</td></tr>
+    <tr><td><span class="badge badge-private">App</span></td><td>service-pri-app-02c</td><td>2c</td><td>172.25.0.192/26</td><td>No</td></tr>
+    <tr><td><span class="badge badge-private">GPU추론</span></td><td>service-pri-gpu-infer-01a</td><td>2a</td><td>172.25.1.0/26</td><td>No</td></tr>
+    <tr><td><span class="badge badge-private">GPU추론</span></td><td>service-pri-gpu-infer-02c</td><td>2c</td><td>172.25.1.64/26</td><td>No</td></tr>
+    <tr><td><span class="badge badge-private">GPU학습</span></td><td>service-pri-gpu-train-01a</td><td>2a</td><td>172.25.1.128/26</td><td>No</td></tr>
+    <tr><td><span class="badge badge-private">GPU학습</span></td><td>service-pri-gpu-train-02c</td><td>2c</td><td>172.25.1.192/26</td><td>No</td></tr>
+    <tr><td><span class="badge badge-private">개발</span></td><td>service-pri-dev-01a</td><td>2a</td><td>172.25.2.0/26</td><td>No</td></tr>
+    <tr><td><span class="badge badge-private">개발</span></td><td>service-pri-dev-02c</td><td>2c</td><td>172.25.2.64/26</td><td>No</td></tr>
+    <tr><td><span class="badge badge-private">운영DB</span></td><td>service-pri-db-01a</td><td>2a</td><td>172.25.2.128/27</td><td>No</td></tr>
+    <tr><td><span class="badge badge-private">운영DB</span></td><td>service-pri-db-02c</td><td>2c</td><td>172.25.2.160/27</td><td>No</td></tr>
+    <tr><td><span class="badge badge-private">개발DB</span></td><td>service-pri-devdb-01a</td><td>2a</td><td>172.25.2.192/27</td><td>No</td></tr>
+    <tr><td><span class="badge badge-private">개발DB</span></td><td>service-pri-devdb-02c</td><td>2c</td><td>172.25.2.224/27</td><td>No</td></tr>
+</table>
+
+<h2 id="step4">Step 4. NAT Gateway 생성 (Regional)</h2>
+
+<div class="step-box">
+    <strong>경로:</strong> VPC > NAT gateways > Create NAT gateway
+</div>
+
+<div class="diagram-box">
+    <pre class="mermaid">
+graph LR
+    PRIVATE["Private Subnet<br/>(모든 AZ)"] -->|"0.0.0.0/0"| NAT["NAT Gateway<br/>Regional Mode<br/>service-pub-01a"]
+    NAT --> IGW["Internet Gateway"]
+    IGW --> INTERNET["인터넷"]
+    </pre>
+</div>
+
+<table>
+    <tr><th>항목</th><th>입력값</th></tr>
+    <tr><td>Name</td><td>sillaeng-demo-service-nat-regional</td></tr>
+    <tr><td>Subnet</td><td>service-pub-01a</td></tr>
+    <tr><td>Connectivity type</td><td>Public</td></tr>
+    <tr><td>Elastic IP</td><td>Allocate Elastic IP 클릭</td></tr>
+</table>
+
+<div class="info-box">
+    <strong>비용 절감:</strong> Regional NAT Gateway는 단일 NAT로 모든 AZ를 커버합니다. AZ별 NAT 2개 대비 약 50% 비용 절감 효과가 있습니다.
+</div>
+
+<h2 id="step5">Step 5. Route Table 생성</h2>
+
+<div class="diagram-box">
+    <pre class="mermaid">
+graph TB
+    subgraph RT_PUB["Public Route Table"]
+        R1["0.0.0.0/0 → IGW"]
+    end
+
+    subgraph RT_PRI["Private Route Tables (6개)"]
+        R2["0.0.0.0/0 → NAT Gateway"]
+        R3["192.168.0.0/16 → VGW (Route Propagation)"]
+    end
+
+    RT_PUB --> PUB_SUB["Public Subnets"]
+    RT_PRI --> PRI_SUB["Private Subnets"]
+    </pre>
+</div>
+
+<h3>Public Route Table</h3>
+<p>Name: <code>sillaeng-demo-rt-service-public</code></p>
+<table>
+    <tr><th>Destination</th><th>Target</th></tr>
+    <tr><td>172.25.0.0/22</td><td>local</td></tr>
+    <tr><td>0.0.0.0/0</td><td>Internet Gateway</td></tr>
+</table>
+<p>Subnet associations: service-pub-01a, service-pub-02c</p>
+
+<h3>Private Route Tables</h3>
+<table>
+    <tr><th>Route Table 이름</th><th>연결 서브넷</th></tr>
+    <tr><td>sillaeng-demo-rt-service-private-app</td><td>service-pri-app-01a, 02c</td></tr>
+    <tr><td>sillaeng-demo-rt-service-private-gpu-infer</td><td>service-pri-gpu-infer-01a, 02c</td></tr>
+    <tr><td>sillaeng-demo-rt-service-private-gpu-train</td><td>service-pri-gpu-train-01a, 02c</td></tr>
+    <tr><td>sillaeng-demo-rt-service-private-dev</td><td>service-pri-dev-01a, 02c</td></tr>
+    <tr><td>sillaeng-demo-rt-service-private-db</td><td>service-pri-db-01a, 02c</td></tr>
+    <tr><td>sillaeng-demo-rt-service-private-devdb</td><td>service-pri-devdb-01a, 02c</td></tr>
+</table>
+<p>각 Private RT Route: <code>0.0.0.0/0</code> → NAT Gateway</p>
+
+<h2 id="step6">Step 6. Security Group 생성</h2>
+
+<div class="diagram-box">
+    <pre class="mermaid">
+graph LR
+    INET["인터넷<br/>0.0.0.0/0"] -->|"22"| BASTION_SG["Bastion SG"]
+    INET -->|"80, 443"| ALB_SG["ALB SG"]
+    VPC_CIDR["VPC 내부<br/>172.25.0.0/22"] -->|"22,80,443,8080"| APP_SG["App SG"]
+    VPC_CIDR -->|"22,80,443,8080"| DEV_SG["Dev SG"]
+    VPC_CIDR -->|"22,8080"| GPU_SG["GPU SG"]
+    VPC_CIDR -->|"5432"| DB_SG["DB SG"]
+    IDC["IDC<br/>192.168.0.0/16"] -->|"22,80,443"| DEV_SG
+    IDC -->|"22"| GPU_SG
+    IDC -->|"5432"| DB_SG
+    </pre>
+</div>
+
+<h3>보안그룹 목록</h3>
+<table>
+    <tr><th>SG Name</th><th>용도</th><th>주요 Inbound</th></tr>
+    <tr><td>service-pub-bastion-ec2</td><td>Bastion</td><td>SSH(22) from 0.0.0.0/0</td></tr>
+    <tr><td>service-pub-alb</td><td>ALB</td><td>HTTP(80), HTTPS(443) from 0.0.0.0/0</td></tr>
+    <tr><td>service-private-app-ec2</td><td>App 서버</td><td>22,80,443,8080 from VPC + IDC</td></tr>
+    <tr><td>service-private-gpu-infer-ec2</td><td>GPU 추론</td><td>22,8080 from VPC + IDC SSH</td></tr>
+    <tr><td>service-private-gpu-train-ec2</td><td>GPU 학습</td><td>22,8080,8888 from VPC + IDC SSH</td></tr>
+    <tr><td>service-private-dev-ec2</td><td>개발 서버</td><td>22,80,443,8080 from VPC + IDC</td></tr>
+    <tr><td>service-private-db-rds</td><td>운영 DB</td><td>5432 from VPC + IDC</td></tr>
+    <tr><td>service-private-devdb-rds</td><td>개발 DB</td><td>5432 from VPC + IDC</td></tr>
+    <tr><td>service-private-endpoint</td><td>VPC Endpoint</td><td>443 from VPC</td></tr>
+</table>
+
+<h2 id="step7">Step 7. VPC Endpoint 생성</h2>
+
+<div class="diagram-box">
+    <pre class="mermaid">
+graph LR
+    EC2["Private EC2"] -->|"Gateway Endpoint"| S3["Amazon S3"]
+    EC2 -->|"Interface Endpoint"| SSM["AWS SSM"]
+    EC2 -->|"Interface Endpoint"| SSMM["SSM Messages"]
+    EC2 -->|"Interface Endpoint"| EC2M["EC2 Messages"]
+    </pre>
+</div>
+
+<table>
+    <tr><th>Name</th><th>Type</th><th>Service</th></tr>
+    <tr><td>ep-s3-service</td><td>Gateway</td><td>com.amazonaws.ap-northeast-2.s3</td></tr>
+    <tr><td>ep-ssm-service</td><td>Interface</td><td>com.amazonaws.ap-northeast-2.ssm</td></tr>
+    <tr><td>ep-ssmmessages-service</td><td>Interface</td><td>com.amazonaws.ap-northeast-2.ssmmessages</td></tr>
+    <tr><td>ep-ec2messages-service</td><td>Interface</td><td>com.amazonaws.ap-northeast-2.ec2messages</td></tr>
+</table>
+
+<h2 id="step8">Step 8. VPN Gateway (IDC 연결)</h2>
+
+<div class="diagram-box">
+    <pre class="mermaid">
+graph LR
+    subgraph AWS["Service VPC (172.25.0.0/22)"]
+        VGW["Virtual Private<br/>Gateway (VGW)"]
+    end
+
+    subgraph TUNNEL["IPsec VPN Tunnel"]
+        T1["Tunnel 1"]
+        T2["Tunnel 2"]
+    end
+
+    subgraph IDC_VPC["IDC VPC (192.168.0.0/16)"]
+        CGW["Customer Gateway<br/>Openswan EC2<br/>EIP: 3.34.225.161"]
+    end
+
+    VGW --- T1
+    VGW --- T2
+    T1 --- CGW
+    T2 --- CGW
+    </pre>
+</div>
+
+<h3>생성 순서</h3>
+<ol>
+    <li><strong>VGW 생성:</strong> Name: <code>sillaeng-demo-service-vgw</code> → VPC에 Attach</li>
+    <li><strong>CGW 생성:</strong> BGP ASN: 65001, IP: <code>3.34.225.161</code></li>
+    <li><strong>VPN Connection 생성:</strong> Static Routing, Static Route: <code>192.168.0.0/16</code></li>
+    <li><strong>Route Propagation:</strong> 모든 Private RT에서 VGW propagation 활성화</li>
+</ol>
+
+<div class="warning-box">
+    <strong>주의:</strong> VPN Connection 생성 후, Openswan EC2에서 IPsec 설정을 완료해야 터널이 UP됩니다. (05번 가이드 참조)
+</div>
+
+<script>mermaid.initialize({startOnLoad:true, theme:'default'});</script>
+</body>
+</html>

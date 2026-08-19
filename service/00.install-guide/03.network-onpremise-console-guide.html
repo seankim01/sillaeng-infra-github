@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>03. Network On-Premise (IDC) - AWS 콘솔 배포 가이드</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background: #f8f9fa; color: #333; }
+        h1 { color: #232f3e; border-bottom: 3px solid #ff9900; padding-bottom: 10px; }
+        h2 { color: #232f3e; border-left: 4px solid #ff9900; padding-left: 12px; margin-top: 40px; }
+        h3 { color: #545b64; }
+        table { border-collapse: collapse; width: 100%; margin: 15px 0; }
+        th, td { border: 1px solid #ddd; padding: 10px 12px; text-align: left; }
+        th { background: #232f3e; color: white; }
+        tr:nth-child(even) { background: #f2f2f2; }
+        .diagram-box { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .step-box { background: #fff3cd; border-left: 4px solid #ff9900; padding: 15px; margin: 10px 0; border-radius: 4px; }
+        .info-box { background: #d1ecf1; border-left: 4px solid #17a2b8; padding: 15px; margin: 10px 0; border-radius: 4px; }
+        code { background: #e9ecef; padding: 2px 6px; border-radius: 3px; font-family: 'Courier New', monospace; }
+    </style>
+</head>
+<body>
+
+<h1>03. Network On-Premise (IDC VPC) - AWS 콘솔 배포 가이드</h1>
+
+<div class="info-box">
+    <strong>환경 정보</strong><br>
+    AWS Profile: mzc-dsa04 | 리전: ap-northeast-2 (서울) | VPC: bundang-idc-bundang-vpc (192.168.0.0/16)
+</div>
+
+<h2>전체 아키텍처</h2>
+
+<div class="diagram-box">
+    <pre class="mermaid">
+graph TB
+    subgraph IDC_VPC["bundang-idc-bundang-vpc (192.168.0.0/16)"]
+        subgraph PUB["Public Subnet (192.168.0.0/25, 192.168.0.128/25)"]
+            IGW_IDC[Internet Gateway]
+            NAT_IDC[NAT Gateway<br/>Regional]
+            OPENSWAN["Openswan EC2<br/>VPN Server<br/>EIP: 3.34.225.161<br/>source_dest_check=OFF"]
+        end
+
+        subgraph PRI["Private Subnet (192.168.1.0/24, 192.168.2.0/24)"]
+            PRI_BASTION["Private Bastion<br/>t3.medium"]
+        end
+    end
+
+    subgraph AWS_VPC["sillaeng-demo-service-vpc (172.25.0.0/22)"]
+        VGW["VPN Gateway"]
+    end
+
+    INTERNET["인터넷"] --> IGW_IDC
+    PRI --> NAT_IDC --> IGW_IDC
+    OPENSWAN ---|"IPsec Tunnel"| VGW
+    PRI_BASTION -->|"172.25.0.0/22<br/>via Openswan ENI"| OPENSWAN
+    </pre>
+</div>
+
+<h2>Step 1. VPC 생성</h2>
+<div class="step-box"><strong>경로:</strong> VPC > Your VPCs > Create VPC</div>
+<table>
+    <tr><th>항목</th><th>입력값</th></tr>
+    <tr><td>Name tag</td><td>bundang-idc-bundang-vpc</td></tr>
+    <tr><td>IPv4 CIDR</td><td>192.168.0.0/16</td></tr>
+    <tr><td>IPv6</td><td>No</td></tr>
+</table>
+<p>DNS resolution / DNS hostnames 활성화</p>
+
+<h2>Step 2. Internet Gateway</h2>
+<div class="step-box"><strong>경로:</strong> VPC > Internet gateways > Create</div>
+<p>Name: <code>sillaeng-idc-bundang-igw</code> → VPC에 Attach</p>
+
+<h2>Step 3. Subnet 생성</h2>
+
+<div class="diagram-box">
+    <pre class="mermaid">
+graph LR
+    subgraph AZ_A["ap-northeast-2a"]
+        PA["bundang-pub-01a<br/>192.168.0.0/25"]
+        PRA["bundang-pri-01a<br/>192.168.1.0/24"]
+    end
+    subgraph AZ_C["ap-northeast-2c"]
+        PC["bundang-pub-02c<br/>192.168.0.128/25"]
+        PRC["bundang-pri-02c<br/>192.168.2.0/24"]
+    end
+    </pre>
+</div>
+
+<table>
+    <tr><th>Name</th><th>AZ</th><th>CIDR</th><th>Public IP</th></tr>
+    <tr><td>bundang-pub-01a</td><td>2a</td><td>192.168.0.0/25</td><td>Yes</td></tr>
+    <tr><td>bundang-pub-02c</td><td>2c</td><td>192.168.0.128/25</td><td>Yes</td></tr>
+    <tr><td>bundang-pri-01a</td><td>2a</td><td>192.168.1.0/24</td><td>No</td></tr>
+    <tr><td>bundang-pri-02c</td><td>2c</td><td>192.168.2.0/24</td><td>No</td></tr>
+</table>
+
+<h2>Step 4. NAT Gateway (Regional)</h2>
+<div class="step-box"><strong>경로:</strong> VPC > NAT gateways > Create</div>
+<table>
+    <tr><th>항목</th><th>입력값</th></tr>
+    <tr><td>Name</td><td>sillaeng-idc-bundang-nat-regional</td></tr>
+    <tr><td>Subnet</td><td>bundang-pub-01a</td></tr>
+    <tr><td>Type</td><td>Public + Allocate EIP</td></tr>
+</table>
+
+<h2>Step 5. Route Table</h2>
+
+<div class="diagram-box">
+    <pre class="mermaid">
+graph TB
+    subgraph PUBLIC_RT["Public RT"]
+        PR1["0.0.0.0/0 → IGW"]
+    end
+    subgraph PRIVATE_RT["Private RT"]
+        PR2["0.0.0.0/0 → NAT Gateway"]
+        PR3["172.25.0.0/22 → Openswan ENI<br/>(EC2 배포 후 추가)"]
+    end
+    </pre>
+</div>
+
+<table>
+    <tr><th>Route Table</th><th>Routes</th><th>Subnet</th></tr>
+    <tr><td>sillaeng-idc-rt-bundang-public</td><td>0.0.0.0/0 → IGW</td><td>bundang-pub-01a, 02c</td></tr>
+    <tr><td>sillaeng-idc-rt-bundang-private</td><td>0.0.0.0/0 → NAT<br/>172.25.0.0/22 → Openswan ENI</td><td>bundang-pri-01a, 02c</td></tr>
+</table>
+
+<h2>Step 6. Security Group</h2>
+
+<table>
+    <tr><th>SG Name</th><th>용도</th><th>주요 Inbound</th></tr>
+    <tr><td>bundang-public-bastion-ec2</td><td>Openswan VPN</td><td>22, 80, 443, 500(UDP/TCP), 4500(UDP/TCP), ICMP</td></tr>
+    <tr><td>bundang-private-bastion-ec2</td><td>Private Bastion</td><td>22, 80, 443 from all + 172.25.0.0/22</td></tr>
+</table>
+
+<script>mermaid.initialize({startOnLoad:true, theme:'default'});</script>
+</body>
+</html>

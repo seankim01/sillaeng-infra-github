@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>05. EC2 On-Premise (Openswan VPN) - AWS 콘솔 배포 가이드</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background: #f8f9fa; color: #333; }
+        h1 { color: #232f3e; border-bottom: 3px solid #ff9900; padding-bottom: 10px; }
+        h2 { color: #232f3e; border-left: 4px solid #ff9900; padding-left: 12px; margin-top: 40px; }
+        h3 { color: #545b64; }
+        table { border-collapse: collapse; width: 100%; margin: 15px 0; }
+        th, td { border: 1px solid #ddd; padding: 10px 12px; text-align: left; }
+        th { background: #232f3e; color: white; }
+        tr:nth-child(even) { background: #f2f2f2; }
+        .diagram-box { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .step-box { background: #fff3cd; border-left: 4px solid #ff9900; padding: 15px; margin: 10px 0; border-radius: 4px; }
+        .info-box { background: #d1ecf1; border-left: 4px solid #17a2b8; padding: 15px; margin: 10px 0; border-radius: 4px; }
+        .warning-box { background: #f8d7da; border-left: 4px solid #dc3545; padding: 15px; margin: 10px 0; border-radius: 4px; }
+        .success-box { background: #d4edda; border-left: 4px solid #28a745; padding: 15px; margin: 10px 0; border-radius: 4px; }
+        code { background: #e9ecef; padding: 2px 6px; border-radius: 3px; font-family: 'Courier New', monospace; }
+        pre { background: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+
+<h1>05. EC2 On-Premise (Openswan VPN) - AWS 콘솔 배포 가이드</h1>
+
+<div class="info-box">
+    <strong>환경 정보</strong><br>
+    VPC: bundang-idc-bundang-vpc (192.168.0.0/16) | VPN 대상: sillaeng-demo-service-vpc (172.25.0.0/22)
+</div>
+
+<h2>VPN 통신 흐름도</h2>
+
+<div class="diagram-box">
+    <pre class="mermaid">
+sequenceDiagram
+    participant IDC_PRI as IDC Private<br/>192.168.1.x
+    participant OPENSWAN as Openswan EC2<br/>192.168.0.x<br/>EIP: 3.34.225.161
+    participant AWS_VGW as AWS VPN Gateway<br/>Tunnel IP
+    participant SVC_PRI as Service Private<br/>172.25.2.x
+
+    Note over IDC_PRI,SVC_PRI: IDC → AWS 통신 흐름
+    IDC_PRI->>OPENSWAN: 172.25.0.0/22 via ENI route
+    OPENSWAN->>OPENSWAN: IPsec 암호화
+    OPENSWAN->>AWS_VGW: IPsec Tunnel (인터넷 경유)
+    AWS_VGW->>SVC_PRI: VGW Route Propagation
+
+    Note over IDC_PRI,SVC_PRI: AWS → IDC 통신 흐름
+    SVC_PRI->>AWS_VGW: 192.168.0.0/16 via VGW
+    AWS_VGW->>OPENSWAN: IPsec Tunnel
+    OPENSWAN->>OPENSWAN: IPsec 복호화
+    OPENSWAN->>IDC_PRI: Local routing
+    </pre>
+</div>
+
+<h2>Step 1. EC2 인스턴스 생성</h2>
+
+<h3>Openswan VPN 서버</h3>
+<div class="step-box"><strong>경로:</strong> EC2 > Instances > Launch instances</div>
+
+<table>
+    <tr><th>항목</th><th>설정값</th></tr>
+    <tr><td>Name</td><td>sillaeng-idc-bundang-ec2-public-bastion</td></tr>
+    <tr><td>AMI</td><td>Amazon Linux 2 (2가 아닌 2023은 아님)</td></tr>
+    <tr><td>Instance type</td><td>t3.medium</td></tr>
+    <tr><td>Subnet</td><td>bundang-pub-01a</td></tr>
+    <tr><td>Security group</td><td>bundang-public-bastion-ec2</td></tr>
+    <tr><td>Storage</td><td>20 GiB gp3</td></tr>
+</table>
+
+<div class="warning-box">
+    <strong>필수 설정: Source/Destination Check 비활성화</strong><br>
+    인스턴스 선택 > Actions > Networking > Change source/destination check > <strong>Stop</strong><br>
+    이 설정이 없으면 VPN 트래픽이 EC2를 통과하지 못합니다!
+</div>
+
+<p><strong>EIP 할당:</strong> Elastic IPs > Allocate > Associate to Openswan 인스턴스</p>
+
+<h2>Step 2. Openswan 설치</h2>
+
+<pre>sudo yum install -y openswan</pre>
+
+<h2>Step 3. IP Forwarding 활성화</h2>
+
+<pre>sudo vi /etc/sysctl.conf
+
+# 아래 내용 추가
+net.ipv4.ip_forward = 1
+net.ipv4.conf.default.rp_filter = 0
+net.ipv4.conf.all.rp_filter = 0
+net.ipv4.conf.all.send_redirects = 0
+net.ipv4.conf.default.send_redirects = 0
+net.ipv4.conf.eth0.send_redirects = 0
+net.ipv4.conf.default.accept_redirects = 0
+net.ipv4.conf.all.accept_redirects = 0
+
+# 적용
+sudo sysctl -p</pre>
+
+<h2>Step 4. IPsec 설정</h2>
+
+<div class="diagram-box">
+    <pre class="mermaid">
+graph LR
+    subgraph CONFIG["설정 파일 구조"]
+        A["/etc/ipsec.conf<br/>메인 설정"]
+        B["/etc/ipsec.d/aws-vpn.conf<br/>터널 설정"]
+        C["/etc/ipsec.d/aws-vpn.secrets<br/>PSK 키"]
+    end
+    A --> B
+    A --> C
+    </pre>
+</div>
+
+<h3>4-1. /etc/ipsec.conf</h3>
+<pre>config setup
+    protostack=netkey
+    nat_traversal=yes
+    virtual_private=%v4:10.0.0.0/8,%v4:192.168.0.0/16,%v4:172.16.0.0/12
+    oe=off
+
+include /etc/ipsec.d/*.conf</pre>
+
+<h3>4-2. /etc/ipsec.d/aws-vpn.conf</h3>
+<pre>conn aws-vpn-tunnel1
+    type=tunnel
+    authby=secret
+    left=&lt;Openswan_Private_IP&gt;      # hostname -I 로 확인
+    leftid=&lt;Openswan_EIP&gt;            # 3.34.225.161
+    leftnexthop=%defaultroute
+    leftsubnet=192.168.0.0/16
+    right=&lt;AWS_Tunnel1_Outside_IP&gt;   # VPN 콘솔에서 확인
+    rightsubnet=172.25.0.0/22
+    pfs=yes
+    auto=start
+    ike=aes128-sha1;modp1024
+    phase2alg=aes128-sha1;modp1024
+    ikelifetime=28800s
+    salifetime=3600s
+    dpddelay=10
+    dpdtimeout=30
+    dpdaction=restart_by_peer
+    overlapip=yes
+
+conn aws-vpn-tunnel2
+    type=tunnel
+    authby=secret
+    left=&lt;Openswan_Private_IP&gt;
+    leftid=&lt;Openswan_EIP&gt;
+    leftnexthop=%defaultroute
+    leftsubnet=192.168.0.0/16
+    right=&lt;AWS_Tunnel2_Outside_IP&gt;
+    rightsubnet=172.25.0.0/22
+    pfs=yes
+    auto=start
+    ike=aes128-sha1;modp1024
+    phase2alg=aes128-sha1;modp1024
+    ikelifetime=28800s
+    salifetime=3600s
+    dpddelay=10
+    dpdtimeout=30
+    dpdaction=restart_by_peer
+    overlapip=yes</pre>
+
+<h3>4-3. /etc/ipsec.d/aws-vpn.secrets</h3>
+<pre>&lt;EIP&gt; &lt;Tunnel1_IP&gt; : PSK "&lt;Tunnel1_PSK&gt;"
+&lt;EIP&gt; &lt;Tunnel2_IP&gt; : PSK "&lt;Tunnel2_PSK&gt;"</pre>
+
+<h2>Step 5. iptables FORWARD 허용</h2>
+
+<pre>sudo iptables -I FORWARD 1 -s 192.168.0.0/16 -d 172.25.0.0/22 -j ACCEPT
+sudo iptables -I FORWARD 2 -s 172.25.0.0/22 -d 192.168.0.0/16 -j ACCEPT
+sudo service iptables save</pre>
+
+<div class="warning-box">
+    <strong>중요:</strong> 이 규칙이 없으면 VPN 터널은 UP이지만 실제 트래픽이 포워딩되지 않습니다!
+</div>
+
+<h2>Step 6. IPsec 시작 및 확인</h2>
+
+<pre>sudo systemctl enable ipsec
+sudo systemctl restart ipsec
+
+# 상태 확인
+sudo ipsec status
+sudo ipsec whack --status | grep "established"</pre>
+
+<div class="success-box">
+    <strong>성공 확인:</strong> AWS 콘솔 > VPC > VPN connections > Tunnel details에서 Status: <strong>UP</strong> 확인
+</div>
+
+<h2>Step 7. Route Table에 VPN 경로 추가</h2>
+
+<div class="step-box"><strong>경로:</strong> VPC > Route tables > sillaeng-idc-rt-bundang-private > Edit routes</div>
+
+<table>
+    <tr><th>Destination</th><th>Target</th></tr>
+    <tr><td>172.25.0.0/22</td><td>Network Interface > Openswan EC2의 ENI</td></tr>
+</table>
+
+<h2>통신 테스트</h2>
+
+<div class="diagram-box">
+    <pre class="mermaid">
+graph LR
+    A["IDC Private<br/>192.168.1.x"] -->|"curl 172.25.2.x:80"| B["Service Dev<br/>172.25.2.x"]
+    B -->|"curl 192.168.1.x:80"| A
+    </pre>
+</div>
+
+<pre># IDC → AWS
+curl 172.25.2.x:80
+
+# AWS → IDC
+curl 192.168.1.x:80</pre>
+
+<h2>Troubleshooting</h2>
+<table>
+    <tr><th>증상</th><th>원인</th><th>해결</th></tr>
+    <tr><td>터널 DOWN</td><td>PSK 불일치 또는 설정 오류</td><td><code>sudo tail -f /var/log/pluto.log</code></td></tr>
+    <tr><td>터널 UP, 통신 X</td><td>iptables FORWARD 차단</td><td>iptables FORWARD 규칙 추가</td></tr>
+    <tr><td>터널 UP, 통신 X</td><td>Source/Dest Check ON</td><td>EC2에서 비활성화</td></tr>
+    <tr><td>Connection refused</td><td>대상 서버 웹서비스 미실행</td><td>apache2/httpd 확인</td></tr>
+</table>
+
+<script>mermaid.initialize({startOnLoad:true, theme:'default'});</script>
+</body>
+</html>
