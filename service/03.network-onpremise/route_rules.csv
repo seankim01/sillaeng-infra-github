@@ -1,0 +1,3 @@
+vpc,service,position,dst_cidr,igw,vpce,tgw,pl,pcx,nat,eni,description
+bundang-idc-bundang-vpc,bundang,bundang-public,0.0.0.0/0,bundang-idc-bundang-vpc,,,,,,,"IGW default route"
+bundang-idc-bundang-vpc,bundang,bundang-private,0.0.0.0/0,,,,,,bundang-nat-pub-01a,,"NAT GW default route"

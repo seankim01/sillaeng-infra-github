@@ -1,0 +1,17 @@
+vpc,name,service,purpose,position,type,from_port,to_port,protocol,source,src_sg,description
+bundang-idc-bundang-vpc,ext-alb,bundang,alb-ext,alb,ingress,80,80,tcp,0.0.0.0/0,,Ingress 80 all
+bundang-idc-bundang-vpc,ext-alb,bundang,alb-ext,alb,ingress,443,443,tcp,0.0.0.0/0,,Ingress 443 all
+bundang-idc-bundang-vpc,ext-alb,bundang,alb-ext,alb,egress,0,0,-1,0.0.0.0/0,,Egress all
+bundang-idc-bundang-vpc,bundang-public-bastion-ec2,bundang,bundang-public-bastion,ec2,ingress,22,22,tcp,0.0.0.0/0,,Ingress 22 all
+bundang-idc-bundang-vpc,bundang-public-bastion-ec2,bundang,bundang-public-bastion,ec2,ingress,80,80,tcp,0.0.0.0/0,,Ingress 80 all
+bundang-idc-bundang-vpc,bundang-public-bastion-ec2,bundang,bundang-public-bastion,ec2,ingress,443,443,tcp,0.0.0.0/0,,Ingress 443 all
+bundang-idc-bundang-vpc,bundang-public-bastion-ec2,bundang,bundang-public-bastion,ec2,ingress,4500,4500,udp,0.0.0.0/0,,Ingress UDP 4500 all
+bundang-idc-bundang-vpc,bundang-public-bastion-ec2,bundang,bundang-public-bastion,ec2,ingress,4500,4500,tcp,0.0.0.0/0,,Ingress TCP 4500 all
+bundang-idc-bundang-vpc,bundang-public-bastion-ec2,bundang,bundang-public-bastion,ec2,ingress,500,500,udp,0.0.0.0/0,,Ingress UDP 500 all
+bundang-idc-bundang-vpc,bundang-public-bastion-ec2,bundang,bundang-public-bastion,ec2,ingress,500,500,tcp,0.0.0.0/0,,Ingress TCP 500 all
+bundang-idc-bundang-vpc,bundang-public-bastion-ec2,bundang,bundang-public-bastion,ec2,ingress,0,0,icmp,0.0.0.0/0,,Ingress icmp all
+bundang-idc-bundang-vpc,bundang-public-bastion-ec2,bundang,bundang-public-bastion,ec2,egress,0,0,-1,0.0.0.0/0,,Egress all
+bundang-idc-bundang-vpc,bundang-private-bastion-ec2,bundang,bundang-private-bastion,ec2,ingress,22,22,tcp,0.0.0.0/0,,Ingress 22 all
+bundang-idc-bundang-vpc,bundang-private-bastion-ec2,bundang,bundang-private-bastion,ec2,ingress,80,80,tcp,0.0.0.0/0,,Ingress 80 all
+bundang-idc-bundang-vpc,bundang-private-bastion-ec2,bundang,bundang-private-bastion,ec2,ingress,443,443,tcp,0.0.0.0/0,,Ingress 443 all
+bundang-idc-bundang-vpc,bundang-private-bastion-ec2,bundang,bundang-private-bastion,ec2,egress,0,0,-1,0.0.0.0/0,,Egress all

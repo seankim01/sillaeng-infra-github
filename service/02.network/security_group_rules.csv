@@ -1,0 +1,29 @@
+vpc,name,service,purpose,position,type,from_port,to_port,protocol,source,src_sg,description
+sillaeng-demo-service-vpc,service-pub-bastion-ec2,service,bastion,ec2,ingress,22,22,tcp,0.0.0.0/0,,Ingress SSH 22
+sillaeng-demo-service-vpc,service-pub-bastion-ec2,service,bastion,ec2,egress,0,0,-1,0.0.0.0/0,,Egress all
+sillaeng-demo-service-vpc,service-pub-alb,service,alb,alb,ingress,80,80,tcp,0.0.0.0/0,,Ingress HTTP 80
+sillaeng-demo-service-vpc,service-pub-alb,service,alb,alb,ingress,443,443,tcp,0.0.0.0/0,,Ingress HTTPS 443
+sillaeng-demo-service-vpc,service-pub-alb,service,alb,alb,egress,0,0,-1,0.0.0.0/0,,Egress all
+sillaeng-demo-service-vpc,service-private-app-ec2,service,app,ec2,ingress,22,22,tcp,172.25.0.0/22,,Ingress SSH from VPC
+sillaeng-demo-service-vpc,service-private-app-ec2,service,app,ec2,ingress,80,80,tcp,172.25.0.0/22,,Ingress HTTP from VPC
+sillaeng-demo-service-vpc,service-private-app-ec2,service,app,ec2,ingress,443,443,tcp,172.25.0.0/22,,Ingress HTTPS from VPC
+sillaeng-demo-service-vpc,service-private-app-ec2,service,app,ec2,ingress,8080,8080,tcp,172.25.0.0/22,,Ingress 8080 from VPC
+sillaeng-demo-service-vpc,service-private-app-ec2,service,app,ec2,egress,0,0,-1,0.0.0.0/0,,Egress all
+sillaeng-demo-service-vpc,service-private-gpu-infer-ec2,service,gpu-infer,ec2,ingress,22,22,tcp,172.25.0.0/22,,Ingress SSH from VPC
+sillaeng-demo-service-vpc,service-private-gpu-infer-ec2,service,gpu-infer,ec2,ingress,8080,8080,tcp,172.25.0.0/22,,Ingress 8080 from VPC
+sillaeng-demo-service-vpc,service-private-gpu-infer-ec2,service,gpu-infer,ec2,egress,0,0,-1,0.0.0.0/0,,Egress all
+sillaeng-demo-service-vpc,service-private-gpu-train-ec2,service,gpu-train,ec2,ingress,22,22,tcp,172.25.0.0/22,,Ingress SSH from VPC
+sillaeng-demo-service-vpc,service-private-gpu-train-ec2,service,gpu-train,ec2,ingress,8080,8080,tcp,172.25.0.0/22,,Ingress 8080 from VPC
+sillaeng-demo-service-vpc,service-private-gpu-train-ec2,service,gpu-train,ec2,ingress,8888,8888,tcp,172.25.0.0/22,,Ingress Jupyter 8888 from VPC
+sillaeng-demo-service-vpc,service-private-gpu-train-ec2,service,gpu-train,ec2,egress,0,0,-1,0.0.0.0/0,,Egress all
+sillaeng-demo-service-vpc,service-private-dev-ec2,service,dev,ec2,ingress,22,22,tcp,172.25.0.0/22,,Ingress SSH from VPC
+sillaeng-demo-service-vpc,service-private-dev-ec2,service,dev,ec2,ingress,80,80,tcp,172.25.0.0/22,,Ingress HTTP from VPC
+sillaeng-demo-service-vpc,service-private-dev-ec2,service,dev,ec2,ingress,443,443,tcp,172.25.0.0/22,,Ingress HTTPS from VPC
+sillaeng-demo-service-vpc,service-private-dev-ec2,service,dev,ec2,ingress,8080,8080,tcp,172.25.0.0/22,,Ingress 8080 from VPC
+sillaeng-demo-service-vpc,service-private-dev-ec2,service,dev,ec2,egress,0,0,-1,0.0.0.0/0,,Egress all
+sillaeng-demo-service-vpc,service-private-db-rds,service,db,rds,ingress,5432,5432,tcp,172.25.0.0/22,,Ingress PostgreSQL 5432 from VPC
+sillaeng-demo-service-vpc,service-private-db-rds,service,db,rds,egress,0,0,-1,0.0.0.0/0,,Egress all
+sillaeng-demo-service-vpc,service-private-devdb-rds,service,devdb,rds,ingress,5432,5432,tcp,172.25.0.0/22,,Ingress PostgreSQL 5432 from VPC
+sillaeng-demo-service-vpc,service-private-devdb-rds,service,devdb,rds,egress,0,0,-1,0.0.0.0/0,,Egress all
+sillaeng-demo-service-vpc,service-private-endpoint,service,endpoint,endpoint,ingress,443,443,tcp,172.25.0.0/22,,Ingress HTTPS for VPC Endpoints
+sillaeng-demo-service-vpc,service-private-endpoint,service,endpoint,endpoint,egress,0,0,-1,0.0.0.0/0,,Egress all

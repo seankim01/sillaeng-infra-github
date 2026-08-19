@@ -1,0 +1,8 @@
+vpc,service,position,dst_cidr,igw,vpce,tgw,pl,pcx,nat,eni,description
+sillaeng-demo-service-vpc,service,service-public,0.0.0.0/0,sillaeng-demo-service-vpc,,,,,,,"IGW default route"
+sillaeng-demo-service-vpc,service,service-private-app,0.0.0.0/0,,,,,,service-nat-regional,,"NAT GW default route"
+sillaeng-demo-service-vpc,service,service-private-gpu-infer,0.0.0.0/0,,,,,,service-nat-regional,,"NAT GW default route"
+sillaeng-demo-service-vpc,service,service-private-gpu-train,0.0.0.0/0,,,,,,service-nat-regional,,"NAT GW default route"
+sillaeng-demo-service-vpc,service,service-private-dev,0.0.0.0/0,,,,,,service-nat-regional,,"NAT GW default route"
+sillaeng-demo-service-vpc,service,service-private-db,0.0.0.0/0,,,,,,service-nat-regional,,"NAT GW default route"
+sillaeng-demo-service-vpc,service,service-private-devdb,0.0.0.0/0,,,,,,service-nat-regional,,"NAT GW default route"

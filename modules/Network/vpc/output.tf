@@ -10,3 +10,7 @@ output "sg_info" {
   value = aws_security_group.this
 }
 
+output "rt_info" {
+  value = aws_route_table.this
+}
+
